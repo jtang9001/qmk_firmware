@@ -21,11 +21,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config_common.h"
 
 /* USB Device descriptor parameter */
-#define VENDOR_ID       0xCB10
-#define PRODUCT_ID      0x1169
+#define VENDOR_ID       0x1209
+#define PRODUCT_ID      0x9084
 #define DEVICE_VER      0x0100
-#define MANUFACTURER    Keebio
-#define PRODUCT         BFO-9000
+#define MANUFACTURER    Double-A
+#define PRODUCT         BFO-9084
 
 /* key matrix size */
 // Rows are doubled-up
@@ -53,6 +53,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define RGB_DI_PIN B4
 #define RGBLED_NUM 20    // Number of LEDs
 #define RGBLED_SPLIT { 10, 10 }
+#define RGBLIGHT_LED_MAP { 0, 1, 2, 3, 4, 15, 16, 17, 18, 19, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 }
 
 /*
  * Feature disable options
