@@ -453,6 +453,10 @@ void rgblight_sethsv_noeeprom_old(uint8_t hue, uint8_t sat, uint8_t val) {
     }
 }
 
+void rgblight_setrange(uint8_t range) {
+    rgblight_config.range = range;
+}
+
 void rgblight_sethsv_eeprom_helper(uint8_t hue, uint8_t sat, uint8_t val, bool write_to_eeprom) {
     if (rgblight_config.enable) {
         rgblight_status.base_mode = mode_base_table[rgblight_config.mode];
@@ -480,7 +484,7 @@ void rgblight_sethsv_eeprom_helper(uint8_t hue, uint8_t sat, uint8_t val, bool w
 #ifdef RGBLIGHT_EFFECT_RAINBOW_SWIRL
             else if (rgblight_status.base_mode == RGBLIGHT_MODE_RAINBOW_SWIRL) {
                 // rainbow swirl, ignore the change of hue
-                hue = rgblight_config.hue;
+                //hue = rgblight_config.hue;
             }
 #endif
 #ifdef RGBLIGHT_EFFECT_STATIC_GRADIENT
@@ -1077,7 +1081,7 @@ void rgblight_effect_rainbow_swirl(animation_status_t *anim) {
     uint8_t i;
 
     for (i = 0; i < rgblight_ranges.effect_num_leds; i++) {
-        hue = (RGBLIGHT_RAINBOW_SWIRL_RANGE / rgblight_ranges.effect_num_leds * i + anim->current_hue);
+        hue = (rgblight_config.range / rgblight_ranges.effect_num_leds * i + anim->current_hue);
         sethsv(hue, rgblight_config.sat, rgblight_config.val, (LED_TYPE *)&led[i + rgblight_ranges.effect_start_pos]);
     }
     rgblight_set();
@@ -1087,6 +1091,17 @@ void rgblight_effect_rainbow_swirl(animation_status_t *anim) {
     } else {
         anim->current_hue--;
     }
+
+    if (rgblight_config.range < 255) {
+        if (anim->current_hue > rgblight_config.hue + rgblight_config.range) {
+            anim->current_hue = rgblight_config.hue;
+        } 
+        else if (anim->current_hue < rgblight_config.hue) {
+            anim->current_hue = rgblight_config.hue + rgblight_config.range;
+        }
+    }
+    
+
 }
 #endif
 
