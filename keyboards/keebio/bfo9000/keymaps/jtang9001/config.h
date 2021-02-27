@@ -30,3 +30,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define RGBLIGHT_EFFECT_RAINBOW_SWIRL
 #define RGBLIGHT_EFFECT_TWINKLE
 
+
+//space saving
+#define DISABLE_LEADER
+#define NO_ACTION_MACRO
+#define NO_ACTION_FUNCTION

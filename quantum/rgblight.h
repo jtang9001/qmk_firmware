@@ -249,7 +249,7 @@ typedef union {
         uint8_t hue : 8;
         uint8_t sat : 8;
         uint8_t val : 8;
-        uint8_t range : 8;
+        // uint8_t range : 8;
         uint8_t speed : 8;  // EECONFIG needs to be increased to support this
     };
 } rgblight_config_t;
@@ -341,7 +341,7 @@ void rgblight_increase_speed_noeeprom(void);
 void rgblight_decrease_speed(void);
 void rgblight_decrease_speed_noeeprom(void);
 void rgblight_sethsv(uint8_t hue, uint8_t sat, uint8_t val);
-void rgblight_setrange(uint8_t range);
+// void rgblight_setrange(uint8_t range);
 void rgblight_sethsv_noeeprom(uint8_t hue, uint8_t sat, uint8_t val);
 
 /*   effect speed */

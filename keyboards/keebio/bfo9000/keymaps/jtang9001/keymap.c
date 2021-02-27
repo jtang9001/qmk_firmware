@@ -6,10 +6,19 @@
 
 #define STX 0x02
 #define ETX 0x03
+#define ESC_SEQ 0x1A
+
+#define ESC_SEQ_02 0x30
+#define ESC_SEQ_03 0x31
+#define ESC_SEQ_1A 0x32
+
 #define OLED_CMD 0x30
 #define RGB_CMD 0x31
 #define RGB_RELEASE 0x30
-#define RGB_SPIRAL 0x31
+#define RGB_HSV_WRITE_SINGLE 0x31
+#define RGB_HSV_WRITE_RANGE 0x32
+#define RGB_SPIRAL 0x33
+#define RGB_READY 0x34
 
 char oledDispStrings[3][16] = {
     {0},
@@ -21,6 +30,7 @@ char oledDispStrings[3][16] = {
 
 uint8_t serBuffer[32] = {0};
 uint8_t serBufLen = 0;
+
 
 rgblight_config_t originalConfig;
 
@@ -50,7 +60,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 };
 
 void keyboard_post_init_user(void) {
-    rgblight_setrange(255);
+    // rgblight_setrange(255);
     // Customise these values to desired behaviour
     debug_enable=true;
     // debug_matrix=true;
@@ -59,50 +69,100 @@ void keyboard_post_init_user(void) {
 }
 
 
+bool escFlag = false;
 void virtser_recv(uint8_t serIn) {
     serBuffer[serBufLen] = serIn;
     serBufLen++;
-    uprintf("RX: %d\n", serIn);
+    uprintf("RX: %X\n", serIn);
 }
 
 void housekeeping_task_user(void) {
     if (serBuffer[0] != STX) {
         serBufLen = 0; //we are in the middle of a message?? start over
     }
-    else {
-        if (serBuffer[serBufLen - 1] == ETX) { //check if message is completed, then we might start processing it
-            uint8_t cmd = serBuffer[1];
-
-            switch (cmd)
-            {
-            case OLED_CMD:
-                print("In OLED\n");
-                uint8_t lineNum = serBuffer[2];
-                memcpy( &oledDispStrings[lineNum][0], &serBuffer[3], serBufLen - 4 );
-                break;
-            
-            case RGB_CMD:
-                print("In RGB\n");
-                uint8_t effectType = serBuffer[2];
-                if (effectType == RGB_RELEASE) {
-                    print("In RGB release\n");
-                    rgblight_setrange(255);
-                    rgblight_reload_from_eeprom();
+    else if (serBuffer[serBufLen - 1] == ETX) { //check if message is completed, then we might start processing it
+        //first, decode escaped sequences
+        bool escFlag = false;
+        uint8_t logicalBuf[32] = {0};
+        uint8_t logicalBufLen = 0;
+        for (uint8_t i = 0; i < serBufLen; i++) {
+            if (serBuffer[i] == ESC_SEQ) {
+                escFlag = true;
+                print("Esc flag set");
+            }
+            else {
+                uint8_t inByte;
+                if (escFlag) {
+                    switch (serBuffer[i])
+                    {
+                    case ESC_SEQ_02:
+                        inByte = 0x02;
+                        break;
+                    case ESC_SEQ_03:
+                        inByte = 0x03;
+                        break;
+                    case ESC_SEQ_1A:
+                        inByte = 0x1A;
+                        break;
+                    default:
+                        break;
+                    }
+                    escFlag = false;
                 }
                 else {
-                    if (effectType == RGB_SPIRAL) {
-                        print("In RGB spiral\n");
-                        rgblight_enable_noeeprom();
-                        rgblight_mode_noeeprom(RGBLIGHT_MODE_RAINBOW_SWIRL + 5);
-                    }
+                    inByte = serBuffer[i];
                 }
-                break;
-            default:
-                break;
+                logicalBuf[logicalBufLen] = inByte;
+                logicalBufLen++;
+                uprintf("LogBuf: %X\n", inByte);
             }
-            
-            serBufLen = 0; //finished processing of this command, delete buffer
         }
+        serBufLen = 0; //finished processing of this command, delete buffer
+        
+        uint8_t cmd = logicalBuf[1];
+
+        switch (cmd)
+        {
+        case OLED_CMD:
+            print("In OLED\n");
+            uint8_t lineNum = logicalBuf[2];
+            memcpy( &oledDispStrings[lineNum][0], &logicalBuf[3], logicalBufLen - 4 );
+            break;
+        
+        case RGB_CMD:
+            print("In RGB\n");
+            uint8_t effectType = logicalBuf[2];
+            if (effectType == RGB_RELEASE) {
+                print("In RGB release\n");
+                // rgblight_setrange(255);
+                rgblight_reload_from_eeprom();
+            }
+            else if (effectType == RGB_SPIRAL) {
+                print("In RGB spiral\n");
+                rgblight_enable_noeeprom();
+                rgblight_mode_noeeprom(RGBLIGHT_MODE_RAINBOW_SWIRL + 5);
+            }
+            else if (effectType == RGB_HSV_WRITE_SINGLE) {
+                print("In RGB write single\n");
+                rgblight_sethsv_at(logicalBuf[4], logicalBuf[5], logicalBuf[6], logicalBuf[3]);
+            }
+            else if (effectType == RGB_HSV_WRITE_RANGE) {
+                print("In RGB write range\n");
+                rgblight_sethsv_range(logicalBuf[5], logicalBuf[6], logicalBuf[7], logicalBuf[3], logicalBuf[4]);
+            }
+            else if (effectType == RGB_READY) {
+                print("In RGB ready\n");
+                rgblight_enable_noeeprom();
+                rgblight_mode_noeeprom(RGBLIGHT_MODE_STATIC_LIGHT);
+                rgblight_sethsv_range(0, 0, 0, 0, RGBLED_NUM);
+            }
+
+
+            break;
+        default:
+            break;
+        }
+        
     }
 }
 
